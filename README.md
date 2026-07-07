@@ -1,3 +1,37 @@
+# Illegal Lego Gears
+
+This fork allow creating gears compatible with lego because they use standard hole diameters and standard holes distance, but you can customize your gears to have less holes, and/or round hole at center (free-wheel gears) in place of standard cross axle.
+
+lego_gear(4, flat_surface=true, cross_hole= false):
+
+<img width="368" height="251" alt="image" src="https://github.com/user-attachments/assets/8e9455cd-a02c-4705-a992-181cb0fd733e" />
+
+lego_gear(4, flat_surface=true, cross_hole= false, stud_radius_target=2):
+
+<img width="378" height="266" alt="image" src="https://github.com/user-attachments/assets/8d7b3191-4e1a-45a9-b6c2-9d2ac0a530ed" />
+
+lego_gear(4, flat_surface=true, cross_hole= true, stud_radius_target=2):
+
+<img width="375" height="268" alt="image" src="https://github.com/user-attachments/assets/e26f398c-d2db-4cca-825f-189772d218e3" />
+
+## Testing
+
+You can  test the library in this two online OpenScad pages:
+- https://ochafik.com/openscad2/
+- https://printpal.io/cad-agent
+
+Both toolw do not support uploading custom libraries, so you will need to embed this whole lego-gears library, and its dependency "[gears](https://github.com/chrisspen/gears)" library, right above your OpenScad code:
+
+    code of gears.scad
+    code of illegal_lego_gears.scad
+    your code
+
+  
+
+------------
+
+# Original readme.md
+
 # lego_gears
 OpenSCAD lib to create lego compatible gears.
 
