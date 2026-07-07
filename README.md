@@ -38,7 +38,7 @@ Both toolw do not support uploading custom libraries, so you will need to embed 
     code of illegal_lego_gears.scad
     your code
 
-  
+  Example: copy this file into  the edit area of one of above tools: https://github.com/jumpjack/illegal_lego_gears/blob/master/bundle.scad
 
 ------------
 
