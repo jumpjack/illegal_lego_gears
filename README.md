@@ -2,28 +2,40 @@
 
 This fork allow creating gears compatible with lego because they use standard hole diameters and standard holes distance, but you can customize your gears to have less holes, and/or round hole at center (free-wheel gears) in place of standard cross axle.
 
-## Standard gear
+## Examples
+
+### Standard gear
 lego_gear(4);
 
 <img width="601" height="393" alt="image" src="https://github.com/user-attachments/assets/5c4519ae-00f4-4835-9244-69c29747c2ea" />
 
 
-##  Standard gear, round hole
+###  Standard gear, round hole
 lego_gear(4, flat_surface=true, cross_hole= false);
 
 <img width="569" height="398" alt="image" src="https://github.com/user-attachments/assets/38a00e83-e92c-4a81-b429-50ac210a0655" />
 
 
-## Gear with reduced number of holes and center round hole
+### Gear with reduced number of holes and center round hole
 lego_gear(4, flat_surface=true, cross_hole= false, stud_radius_target=2);
 
 <img width="571" height="382" alt="image" src="https://github.com/user-attachments/assets/281e9704-4044-48c5-9aa0-3c360dd08eba" />
 
 
-## Gear with reduced number of holes but standard center cross hole
+### Gear with reduced number of holes but standard center cross hole
 lego_gear(4, flat_surface=true, cross_hole= true, stud_radius_target=2);
 
 <img width="581" height="388" alt="image" src="https://github.com/user-attachments/assets/a4cf701a-1c52-44ef-9b1a-7283bcff05ea" />
+
+### Gear with reduced number of cross-holes and rounded central hole
+lego_gear(4, flat_surface=true, cross_hole= false, stud_radius_target=2, stud_cross_hole=true);
+
+<img width="602" height="389" alt="image" src="https://github.com/user-attachments/assets/e03ceeab-6101-461b-afd4-e6f5932eed90" />
+
+### Bevel gear
+lego_gear(4, flat_surface=true, cross_hole= false, bevel=true, stud_radius_target=2, stud_cross_hole=true);
+
+<img width="575" height="368" alt="image" src="https://github.com/user-attachments/assets/f07bd1ec-f975-4e18-b96a-240ddcd5f24d" />
 
 
 ## Testing
