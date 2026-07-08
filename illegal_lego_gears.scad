@@ -15,7 +15,7 @@
     // axle_hole_tolerance - offset from 4.8 standard. Default is 0.05 (4.75mm). Positive values give bigger holes.
     //
     // Extended version:
-    // lego_gear(s, flat_surface=true, central_axle=true, cross_hole=true, stud_radius_target=0, solid=false, stud_hole_tolerance=0.00, axle_hole_tolerance=0.05) {
+    // lego_gear(s, flat_surface=true, central_axle=true, cross_hole=true, stud_radius_target=0, stud_cross_hole = false, solid=false, stud_hole_tolerance=0.00, axle_hole_tolerance=0.05, bevel = false) {
     // cross_hole = false  - creates a round-hole in center, in place of standard cross-hole
     // stud_radius_target = xx - creates only the rounded holes at xx-studs distance from center
     // stud_cross_hole = true - the holes at stud distance are cross-shaped rather than round
