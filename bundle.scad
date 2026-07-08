@@ -1289,7 +1289,7 @@ module lego_axle(m=1, hole=false, tolerance=0.05) {
             else offset(r=-tolerance) 2d_axle();
         }
 
-module lego_gear(s, flat_surface=true, central_axle=true, cross_hole=true, stud_radius_target=0, solid=false, stud_hole_tolerance=0.00, axle_hole_tolerance=0.05, bevel=false, bevel_angle=45) {
+module lego_gear(s, flat_surface=true, central_axle=true, cross_hole=true, stud_radius_target=0, solid=false, stud_hole_tolerance=0.00, axle_hole_tolerance=0.05, bevel=false, bevel_angle=45, stud_cross_hole = false) {
     // Calcolo dei parametri per la libreria gears
     // Il modulo standard Lego è 1.
     // Per i bevel gears, il numero di denti è 16 * s
@@ -1377,4 +1377,48 @@ if (!solid ) {
     }
 }
 
-lego_gear(4, flat_surface=true, cross_hole= true, stud_radius_target=2);
+
+// Configurazione: [s, bevel, cross_hole, stud_radius_target, stud_cross_hole]
+
+gear_configs = [
+    [0.5, false, true,  0, false, true],
+    [1.5, false, false,  1.0, true, true], 
+    [2.0, true, false, 0, false, true],
+   [2.0, false, false, 0, false, false],
+    [3.0, false, true,  2.0, false, true] 
+];
+
+module gear_train() {
+    for (i = [0 : len(gear_configs)-1]) {
+        // Estrazione parametri dall'array
+        s = gear_configs[i][0];
+        bevel = gear_configs[i][1];
+        cross = gear_configs[i][2];
+        rad = gear_configs[i][3];
+        s_cross = gear_configs[i][4];
+        flat = gear_configs[i][5];
+
+        // Calcolo posizione X cumulativa
+        x_pos = calculate_x_pos(i);
+        
+        echo(str("Ingranaggio ", i, ": s=", s, " pos_X=", x_pos));
+
+        translate([-x_pos, 0, 0]) 
+        rotate([0, 0, (i % 2 == 0) ? 0 : 360/(s*16)/2]) 
+        lego_gear(
+            s=s, 
+            bevel=bevel, 
+            cross_hole=cross, 
+            stud_radius_target=rad, 
+            stud_cross_hole=s_cross,
+            flat_surface = flat
+        );
+    }
+}
+
+// Funzione ricorsiva per la posizione basata sulla somma dei raggi (s*8)
+function calculate_x_pos(index) = 
+    (index == 0) ? 0 : 
+    ((gear_configs[index-1][0] + gear_configs[index][0]) * 8) + calculate_x_pos(index-1);
+
+gear_train();
