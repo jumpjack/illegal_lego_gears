@@ -1,4 +1,5 @@
-// a lib to create lego compatibile gears. Requires gears library - // https://github.com/chrisspen/gears which does the heavy lifting.
+
+//////////////////////////////////// illegal lego gears library 
 
 // modules:
 
@@ -13,10 +14,12 @@
     // stud_hole_tolerance - offset from 4.8/6.2mm standard. Positive values give bigger holes.
     // axle_hole_tolerance - offset from 4.8 standard. Default is 0.05 (4.75mm). Positive values give bigger holes.
     //
-    // Extended vesion:
+    // Extended version:
     // lego_gear(s, flat_surface=true, central_axle=true, cross_hole=true, stud_radius_target=0, solid=false, stud_hole_tolerance=0.00, axle_hole_tolerance=0.05) {
     // cross_hole = false  - creates a round-hole in center, in place of standard cross-hole
     // stud_radius_target = xx - creates only the rounded holes at xx-studs distance from center
+    // stud_cross_hole = true - the holes at stud distance are cross-shaped rather than round
+    // bevel = true - 45° bevel gear
 
 
 
@@ -37,6 +40,11 @@
 // example:
 // for (s = [0.5:1:2.5]) translate([s*s*8,0,0]) rotate([0,0,22.5*(s-0.5)]) lego_gear(s);
 // for (s = [1:1:2]) translate([-s*s*8-2,0,0]) rotate([0,0,22.5*s/2]) lego_gear(s, flat_surface=false);
+
+
+
+
+///////////////////
 
 use <gears/gears.scad>; // https://github.com/chrisspen/gears
 $fn=48;
@@ -72,40 +80,55 @@ module lego_axle(m=1, hole=false, tolerance=0.05) {
             else offset(r=-tolerance) 2d_axle();
         }
 
-module lego_gear(s, flat_surface=true, central_axle=true, cross_hole=true, stud_radius_target=0, solid=false, stud_hole_tolerance=0.00, axle_hole_tolerance=0.05) {
-    echo("Spurs", 16*s);
+module lego_gear(s, flat_surface=true, central_axle=true, cross_hole=true, stud_radius_target=0, solid=false, stud_hole_tolerance=0.00, axle_hole_tolerance=0.05, bevel=false, bevel_angle=45) {
+    // Calcolo dei parametri per la libreria gears
+    // Il modulo standard Lego è 1.
+    // Per i bevel gears, il numero di denti è 16 * s
+    teeth = 16 * s;
+
     difference() {
         union () {
-            translate([0,0, 1.93]) spur_gear(1, 16*s, 4, 0, pressure_angle=20, helix_angle=0, optimized=false);
-            if (flat_surface || solid) cylinder(7.75, d=s*16-2.15);
-            else {
-                for (x = [round(-s)+0.5:1:round(s)-0.5]) {
-                    for (y = [round(-s)+0.5:1:round(s)-0.5]){
-                        if (sqrt(pow(x*8,2)+pow(y*8,2))+3.8<=(s*16-3.15)/2) {
-                            translate([x*8, y*8, 0]) cylinder(7.75, d=7.6);
+            if (bevel) {
+                // Generazione Bevel Gear
+                // impostiamo bore=0 per forarlo successivamente
+                bevel_herringbone_gear(modul=1, tooth_number=teeth, partial_cone_angle=bevel_angle, tooth_width=5, bore=0, pressure_angle=20, helix_angle=0);
+            } else {
+                // Generazione Spur Gear standard
+                translate([0,0, 1.93]) spur_gear(1, teeth, 4, 0, pressure_angle=20, helix_angle=0, optimized=false);
+
+                if (flat_surface || solid) cylinder(7.75, d=s*16-2.15);
+                else {
+                    // Supporti per fori standard
+                    for (x = [round(-s)+0.5:1:round(s)-0.5]) {
+                        for (y = [round(-s)+0.5:1:round(s)-0.5]){
+                            if (sqrt(pow(x*8,2)+pow(y*8,2))+3.8<=(s*16-3.15)/2) {
+                                translate([x*8, y*8, 0]) cylinder(7.75, d=7.6);
                             }
                         }
                     }
-                for (x = [round(-s)+1:1:round(s)-1]) {
-                    for (y = [round(-s)+1:1:round(s)-1]){
-                        if (sqrt(pow(x*8,2)+pow(y*8,2))+3.8<=(s*16-3.15)/2) {
-                            translate([x*8, y*8, 0]) cylinder(7.75, d=5.85);
+                    for (x = [round(-s)+1:1:round(s)-1]) {
+                        for (y = [round(-s)+1:1:round(s)-1]){
+                            if (sqrt(pow(x*8,2)+pow(y*8,2))+3.8<=(s*16-3.15)/2) {
+                                translate([x*8, y*8, 0]) cylinder(7.75, d=5.85);
                             }
                         }
                     }
                 }
             }
+        }
 
-        // Foro centrale (gestito precedentemente)
+        // Gestione foro centrale (funziona per entrambi i tipi)
         if (central_axle) {
             if (cross_hole) {
-                translate([0,0,-1]) lego_axle(2, hole=true, tolerance=axle_hole_tolerance);
+                // Nota: l'altezza del foro potrebbe richiedere aggiustamenti in base allo spessore del cono
+                translate([0,0,-2]) lego_axle(2, hole=true, tolerance=axle_hole_tolerance);
             } else {
-                translate([0,0,-1]) cylinder(h=10, d=4.8 + (2 * axle_hole_tolerance));
+                translate([0,0,-2]) cylinder(h=20, d=4.8 + (2 * axle_hole_tolerance));
             }
         }
 
-        if (!solid) {
+        // Fori Stud e Axle (solo per ingranaggi cilindrici standard)
+if (!solid ) {
             // Creazione Stud Holes
             for (x = [round(-s)+0.5:1:round(s)-0.5]) {
                 for (y = [round(-s)+0.5:1:round(s)-0.5]) {
@@ -113,23 +136,29 @@ module lego_gear(s, flat_surface=true, central_axle=true, cross_hole=true, stud_
                     is_at_target = (stud_radius_target == 0) || (abs(dist_val - stud_radius_target) < 0.2);
 
                     if (is_at_target && (sqrt(pow(x*8,2)+pow(y*8,2))+3.8<=(s*16-3.15)/2)) {
-                        translate([x*8, y*8, -1]) cylinder(10, d=4.8 + stud_hole_tolerance);
-                        translate([x*8, y*8, 6.95]) cylinder(10, d=6.2 + stud_hole_tolerance);
-                        translate([x*8, y*8, -9.2]) cylinder(10, d=6.2 + stud_hole_tolerance);
+                        // Modifica logica qui:
+                        if (stud_radius_target != 0 && stud_cross_hole) {
+                            // Crea foro a croce
+                            translate([x*8, y*8, -1]) lego_axle(2, hole=true, tolerance=axle_hole_tolerance);
+                        } else {
+                            // Crea foro tondo standard (comportamento originale)
+                            translate([x*8, y*8, -1]) cylinder(10, d=4.8 + stud_hole_tolerance);
+                            translate([x*8, y*8, 6.95]) cylinder(10, d=6.2 + stud_hole_tolerance);
+                            translate([x*8, y*8, -9.2]) cylinder(10, d=6.2 + stud_hole_tolerance);
+                        }
                     }
                 }
             }
 
-            // Creazione Axle Holes (solo se stud_radius_target è 0, ovvero modalità standard)
+            // Creazione Axle Holes
             if (stud_radius_target == 0) {
                 for (x = [round(-s)+1:1:round(s)-1]) {
                     for (y = [round(-s)+1:1:round(s)-1]){
                         if (sqrt(pow(x*8,2)+pow(y*8,2))+3.8<=(s*16-3.15)/2){
-                            if  ((x!=0) || (y!=0)) translate([x*8, y*8, -1]) lego_axle(2, hole=true, tolerance=axle_hole_tolerance);
+                            if ((x!=0) || (y!=0)) translate([x*8, y*8, -1]) lego_axle(2, hole=true, tolerance=axle_hole_tolerance);
                             if ((s>=1) && ((x!=0) || (y!=0) || central_axle)) {
                                 if ((x+y)%2==0) translate([x*8-4,y*8-0.4,-1]) cube([8,0.8,10]);
                                 else translate([x*8-0.4,y*8-4,-1]) cube([0.8,8,10]);
-                                }
                             }
                         }
                     }
@@ -137,3 +166,4 @@ module lego_gear(s, flat_surface=true, central_axle=true, cross_hole=true, stud_
             }
         }
     }
+}
