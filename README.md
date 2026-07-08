@@ -1,6 +1,8 @@
 # Illegal Lego Gears
 
-This fork allow creating gears compatible with lego because they use standard hole diameters and standard holes distance, but you can customize your gears to have less holes, and/or round hole at center (free-wheel gears) in place of standard cross axle.
+<img width="687" height="389" alt="image" src="https://github.com/user-attachments/assets/ce2ad31e-ddcc-412e-a840-6d417ba84830" />
+
+This fork allow creating gears compatible with lego because they use standard hole diameters and standard holes distance, but you can customize your gears to have less holes, round hole at center (free-wheel gears) in place of standard cross axle, or to create a bevel gear.
 
 ## Examples
 
