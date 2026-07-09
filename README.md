@@ -42,11 +42,16 @@ lego_gear(4, flat_surface=true, cross_hole= false, bevel=true, stud_radius_targe
 
 ## Testing
 
+### My page
+
+[Test](https://jumpjack.github.io/illegal_lego_gears/openscad-test.html)
+
+### 3rd party pages
 You can  test the library in this two online OpenScad pages:
 - https://ochafik.com/openscad2/
 - https://printpal.io/cad-agent
 
-Both toolw do not support uploading custom libraries, so you will need to embed this whole lego-gears library, and its dependency "[gears](https://github.com/chrisspen/gears)" library, right above your OpenScad code:
+Both tools do not support uploading custom libraries, so you will need to embed this whole lego-gears library, and its dependency "[gears](https://github.com/chrisspen/gears)" library, right above your OpenScad code:
 
     code of gears.scad
     code of illegal_lego_gears.scad
