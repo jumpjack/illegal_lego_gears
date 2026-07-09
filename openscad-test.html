@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <title>Configuratore 3D Compatto</title>
+
+  <!-- BabylonJS e Loader STL -->
+  <script src="https://cdn.babylonjs.com/babylon.js"></script>
+  <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      padding: 30px;
+      max-width: 850px;
+      margin: 0 auto;
+      line-height: 1.6;
+      background-color: #f8f9fa;
+      color: #333;
+    }
+    h1 {
+      color: #2c3e50;
+      border-bottom: 2px solid #eaeaea;
+      padding-bottom: 10px;
+    }
+
+    .sezione {
+      background: white;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
+    h3 { margin-top: 0; color: #34495e; border-left: 4px solid #007bff; padding-left: 10px; }
+
+    /* Input e pulsanti */
+    button {
+      padding: 10px 18px;
+      font-size: 14px;
+      font-weight: bold;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+    button:active { transform: scale(0.98); }
+
+    .btn-primary { background-color: #007bff; }
+    .btn-primary:hover { background-color: #0056b3; }
+
+    .btn-success { background-color: #28a745; }
+    .btn-success:hover { background-color: #218838; }
+    .btn-success:disabled { background-color: #bdc3c7; cursor: not-allowed; }
+
+    .btn-download { background-color: #e67e22; font-size: 16px; padding: 12px 24px; }
+    .btn-download:hover { background-color: #d35400; }
+    .btn-download:disabled { background-color: #bdc3c7; cursor: not-allowed; }
+
+    .btn-secondary { background-color: #6c757d; }
+    .btn-secondary:hover { background-color: #5a6268; }
+
+    .btn-danger { background-color: #dc3545; }
+    .btn-danger:hover { background-color: #bd2130; }
+
+    select, input[type="text"] {
+      padding: 8px 12px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 14px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    /* Box di avviso dipendenze */
+    .alert-box {
+      background: #fff3cd;
+      border-left: 4px solid #ffc107;
+      padding: 15px;
+      border-radius: 5px;
+      margin-bottom: 20px;
+      display: none;
+    }
+    .alert-box strong { color: #856404; }
+    .alert-box ul { margin: 5px 0 0 20px; padding: 0; color: #856404; font-size: 14px; }
+
+    /* Terminale di Log */
+    #logContainer {
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 12px;
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 15px;
+      border-radius: 6px;
+      max-height: 180px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      margin-top: 10px;
+      line-height: 1.4;
+      border: 1px solid #333;
+    }
+
+    /* Righe animate per la barra di avanzamento */
+    @keyframes progress-bar-stripes {
+      from { background-position: 1rem 0; }
+      to { background-position: 0 0; }
+    }
+    .stripes {
+      background-image: linear-gradient(45deg, rgba(255,255,255,.15) 25%, transparent 25%, transparent 50%, rgba(255,255,255,.15) 50%, rgba(255,255,255,.15) 75%, transparent 75%, transparent) !important;
+      background-size: 1rem 1rem !important;
+      animation: progress-bar-stripes 1s linear infinite !important;
+    }
+
+    /* Lista File caricati */
+    .file-list { margin: 10px 0; padding: 0; list-style: none; }
+    .file-list li {
+      background: #e9ecef;
+      padding: 8px 12px;
+      margin-bottom: 5px;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+
+    /* --- GRIGLIA COMPATTA PARAMETRI --- */
+    .grid-parametri {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 15px;
+      margin-top: 15px;
+    }
+    .param-box {
+      background: #f8f9fa;
+      border: 1px solid #e9ecef;
+      border-radius: 6px;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .param-box label {
+      font-weight: bold;
+      font-size: 13px;
+      color: #495057;
+      display: flex;
+      align-items: center;
+      gap: 3px;
+    }
+    .asterisk-required {
+      color: #dc3545;
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    #stato {
+      font-weight: bold;
+      padding: 12px;
+      background: #e2e3e5;
+      border-radius: 5px;
+      color: #383d41;
+      margin-top: 15px;
+    }
+
+    #renderCanvas {
+      width: 100%;
+      height: 400px;
+      background-color: #f1f3f5;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      outline: none;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Configuratore OpenSCAD 3D</h1>
+
+  <!-- BOX AVVISI DIPENDENZE MANCANTI -->
+  <div class="alert-box" id="boxAvvisi">
+    <strong>⚠️ Attenzione alle dipendenze mancanti:</strong>
+    <ul id="listaAvvisi"></ul>
+  </div>
+
+  <!-- SEZIONE 1: Caricamento File .scad -->
+  <div class="sezione">
+    <h3>1. Carica le tue Librerie (.scad)</h3>
+    <p style="font-size: 14px; margin-bottom: 15px;">Carica file contenenti i tuoi moduli. Puoi caricare più file contemporaneamente.</p>
+
+    <div style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
+      <button class="btn-primary" onclick="document.getElementById('fileInput').click()">📂 Seleziona file .scad</button>
+      <button class="btn-secondary" id="btnEsempio">✨ Carica Esempio Ingranaggio Conico</button>
+      <button class="btn-danger" id="btnPulisci">🗑️ Pulisci Tutto</button>
+      <input type="file" id="fileInput" multiple accept=".scad" style="display: none;">
+    </div>
+
+    <strong>File attualmente caricati in RAM:</strong>
+    <ul id="listaFile" class="file-list">
+      <li style="color: #6c757d; background: none; padding: 0;">Nessun file caricato.</li>
+    </ul>
+  </div>
+
+  <!-- SEZIONE 2: Selezione Metodo e Pulsante Genera (Affiancati) -->
+  <div class="sezione">
+    <h3>2. Scegli il Modulo e Genera</h3>
+    <div style="display: flex; gap: 12px; align-items: center; width: 100%; flex-wrap: wrap; margin-top: 10px;">
+      <div style="flex-grow: 1; min-width: 250px;">
+        <select id="selectMetodo" disabled>
+          <option value="">-- Carica prima una libreria .scad --</option>
+        </select>
+      </div>
+      <button id="btnRender" class="btn-success" style="flex-shrink: 0; min-height: 42px;" disabled>⚙️ Genera Modello 3D</button>
+    </div>
+  </div>
+
+  <!-- SEZIONE 3: Parametri Generati (Griglia Compatta) -->
+  <div class="sezione" id="sezioneParametri" style="display: none;">
+    <h3>3. Personalizza i Parametri</h3>
+    <div id="containerParametri">
+      <!-- Campi generati dinamicamente in griglia -->
+    </div>
+  </div>
+
+  <!-- SEZIONE AVANZAMENTO GENERAZIONE GRAFICA -->
+  <div class="sezione" id="sezioneProgresso" style="display: none;">
+    <h3 style="border-left: 4px solid #28a745; padding-left: 10px;">⏳ Avanzamento Elaborazione</h3>
+    <div style="background: #e9ecef; border-radius: 6px; height: 24px; width: 100%; overflow: hidden; margin-top: 10px; border: 1px solid #dee2e6;">
+      <div id="progressBar" style="background: linear-gradient(90deg, #28a745, #34ce57); width: 0%; height: 100%; transition: width 0.1s ease-in-out; text-align: center; color: white; font-size: 13px; line-height: 24px; font-weight: bold; text-shadow: 1px 1px 2px rgba(0,0,0,0.4);">0%</div>
+    </div>
+    <div id="faseStato" style="font-size: 14px; color: #495057; margin-top: 8px; font-weight: bold; text-align: center;">Inizializzazione...</div>
+  </div>
+
+  <!-- SEZIONE TERMINALE DI LOG -->
+  <div class="sezione">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <h3>📋 Console Tecnica di Debug (OpenSCAD)</h3>
+      <button class="btn-secondary" id="btnClearLog" style="padding: 4px 10px; font-size: 11px;">Cancella Log</button>
+    </div>
+    <div id="logContainer">
+      <span style="color: #6a9955;">// Terminale pronto. In attesa di compilazione...</span>
+    </div>
+  </div>
+
+  <!-- SEZIONE VISUALIZZATORE 3D (BabylonJS) -->
+  <div class="sezione" id="sezioneVisualizzatore" style="display: none;">
+    <h3>4. Anteprima 3D Interattiva</h3>
+    <canvas id="renderCanvas"></canvas>
+    <p style="font-size: 12px; color: #6c757d; margin-top: 5px; text-align: center;">
+      🖱️ Trascina con il tasto sinistro per ruotare | Ctrl + Trascina per spostare | Rotella per lo zoom.
+    </p>
+  </div>
+
+  <!-- SEZIONE DI GENERAZIONE ED ESPORTAZIONE -->
+  <div class="sezione" style="text-align: center;">
+    <button id="btnDownload" class="btn-download" disabled>⬇️ Scarica File STL</button>
+    <div id="stato">Stato: In attesa di caricare librerie...</div>
+  </div>
+
+  <script type="module">
+    import * as OpenSCADLib from "https://cdn.jsdelivr.net/npm/openscad-wasm@0.0.4/openscad.js";
+
+    const createOpenSCAD = OpenSCADLib.createOpenSCAD;
+
+    // Database locale
+    let librerieCaricate = [];
+    let moduloAttivo = null;
+    let compilazioneAttiva = null;
+
+    // Referenze DOM
+    const fileInput = document.getElementById('fileInput');
+    const listaFile = document.getElementById('listaFile');
+    const selectMetodo = document.getElementById('selectMetodo');
+    const sezioneParametri = document.getElementById('sezioneParametri');
+    const containerParametri = document.getElementById('containerParametri');
+    const btnRender = document.getElementById('btnRender');
+    const btnDownload = document.getElementById('btnDownload');
+    const stato = document.getElementById('stato');
+    const btnEsempio = document.getElementById('btnEsempio');
+    const btnPulisci = document.getElementById('btnPulisci');
+    const sezioneVisualizzatore = document.getElementById('sezioneVisualizzatore');
+    const boxAvvisi = document.getElementById('boxAvvisi');
+    const listaAvvisi = document.getElementById('listaAvvisi');
+    const logContainer = document.getElementById('logContainer');
+    const btnClearLog = document.getElementById('btnClearLog');
+
+    // Referenze Avanzamento Grafico
+    const sezioneProgresso = document.getElementById('sezioneProgresso');
+    const progressBar = document.getElementById('progressBar');
+    const faseStato = document.getElementById('faseStato');
+
+    // --- GESTIONE BARRA DI PROGRESSO GRAFICA ---
+    function impostaFase(nomeFase, percentuale, abilitaAnimazione = false) {
+      sezioneProgresso.style.display = "block";
+      faseStato.innerText = nomeFase;
+      progressBar.style.width = percentuale + "%";
+      progressBar.innerText = percentuale + "%";
+
+      if (abilitaAnimazione) {
+        progressBar.classList.add('stripes');
+      } else {
+        progressBar.classList.remove('stripes');
+      }
+    }
+
+    function aggiornaProgressoCompilazione(percent) {
+      // Mappiamo lo 0-100% della compilazione OpenSCAD sull'intervallo 20% - 85% della barra grafica
+      const valoreBarra = Math.round(20 + (percent * 0.65));
+      progressBar.style.width = valoreBarra + "%";
+      progressBar.innerText = valoreBarra + "%";
+      faseStato.innerText = `Fase 3/5: Calcolo matematico dei solidi in corso... ${percent}%`;
+    }
+
+    // --- FUNZIONE DI LOG ---
+    function logToPage(text, isError = false) {
+      // Intercettazione del log speciale di progresso
+      const progressMatch = text.match(/PROGRESS:\s*(\d+)/i);
+      if (progressMatch) {
+        const percent = parseInt(progressMatch[1], 10);
+        aggiornaProgressoCompilazione(percent);
+        return;
+      }
+
+      if (logContainer.innerHTML.includes("// Terminale pronto")) {
+        logContainer.innerHTML = "";
+      }
+
+      const span = document.createElement('span');
+      if (isError) {
+        span.style.color = '#f44336';
+      } else if (text.startsWith("[Sistema]")) {
+        span.style.color = '#00bcff';
+      } else if (text.toLowerCase().includes("warning")) {
+        span.style.color = '#ffeb3b';
+      } else if (text.includes("Parsing") || text.includes("Compiling")) {
+        span.style.color = '#4caf50';
+      } else {
+        span.style.color = '#d4d4d4';
+      }
+
+      span.innerText = text + "\n";
+      logContainer.appendChild(span);
+      logContainer.scrollTop = logContainer.scrollHeight;
+    }
+
+    btnClearLog.addEventListener('click', () => {
+      logContainer.innerHTML = `<span style="color: #6a9955;">// Terminale pronto. In attesa di compilazione...</span>`;
+    });
+
+    // --- INIZIALIZZAZIONE BABYLONJS ---
+    const canvas = document.getElementById("renderCanvas");
+    const engine = new BABYLON.Engine(canvas, true);
+    let scene;
+    let camera;
+
+    function inizializzaBabylon() {
+      scene = new BABYLON.Scene(engine);
+      scene.clearColor = new BABYLON.Color4(0.95, 0.96, 0.98, 1);
+
+      camera = new BABYLON.ArcRotateCamera("camera", -Math.PI / 2, Math.PI / 3, 50, BABYLON.Vector3.Zero(), scene);
+      camera.attachControl(canvas, true);
+
+      const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), scene);
+      light.intensity = 0.75;
+
+      const dirLight = new BABYLON.DirectionalLight("dirLight", new BABYLON.Vector3(-1, -2, -1), scene);
+      dirLight.position = new BABYLON.Vector3(20, 40, 20);
+      dirLight.intensity = 0.35;
+
+      engine.runRenderLoop(() => {
+        scene.render();
+      });
+
+      window.addEventListener("resize", () => {
+        engine.resize();
+      });
+    }
+
+    inizializzaBabylon();
+
+    // --- PARSER OPENSCAD ---
+    function analizzaCodiceScad(nomeFile, codice) {
+      const moduliTrovati = [];
+      const moduleRegex = /module\s+([a-zA-Z0-9_]+)\s*\(([\s\S]*?)\)/g;
+      let match;
+
+      while ((match = moduleRegex.exec(codice)) !== null) {
+        const nomeModulo = match[1];
+        const stringaParametri = match[2];
+        const parametri = parseParametriString(stringaParametri);
+
+        moduliTrovati.push({
+          name: nomeModulo,
+          params: parametri
+        });
+      }
+      return moduliTrovati;
+    }
+
+    function parseParametriString(paramString) {
+      const params = [];
+      let parametroCorrente = "";
+      let profonditaParentesi = 0;
+
+      for (let i = 0; i < paramString.length; i++) {
+        const char = paramString[i];
+        if (char === '[' || char === '(') profonditaParentesi++;
+        if (char === ']' || char === ')') profonditaParentesi--;
+
+        if (char === ',' && profonditaParentesi === 0) {
+          params.push(parametroCorrente.trim());
+          parametroCorrente = "";
+        } else {
+          parametroCorrente += char;
+        }
+      }
+      if (parametroCorrente.trim()) {
+        params.push(parametroCorrente.trim());
+      }
+
+      return params.map(p => {
+        const parti = p.split('=');
+        const nome = parti[0].trim();
+        const valoreDefault = parti[1] ? parti[1].trim() : "";
+        return { name: nome, defaultValue: valoreDefault };
+      }).filter(p => p.name !== "");
+    }
+
+    // --- RISOLUTORE DIPENDENZE ---
+    function elaboraEVerificaDipendenze() {
+      const avvisi = [];
+      const fileDisponibili = new Set(librerieCaricate.map(lib => lib.name.toLowerCase()));
+      const librerieRiscritte = [];
+
+      librerieCaricate.forEach(lib => {
+        const contenutoRiscritto = lib.content.replace(/(use|include)\s*<([^>]+)>/gi, (match, comando, percorso) => {
+          const nomeFileDep = percorso.split('/').pop().split('\\').pop();
+
+          if (fileDisponibili.has(nomeFileDep.toLowerCase())) {
+            return `${comando} <${nomeFileDep}>`;
+          } else {
+            avvisi.push(`Il file <strong>${lib.name}</strong> richiede la libreria <strong>${nomeFileDep}</strong> (indicata come <code>&lt;${percorso}&gt;</code>), ma non è ancora stata caricata.`);
+            return match;
+          }
+        });
+
+        librerieRiscritte.push({
+          name: lib.name,
+          contentRewritten: contenutoRiscritto,
+          modules: lib.modules
+        });
+      });
+
+      const avvisiUnici = Array.from(new Set(avvisi));
+      return { librerieRiscritte, avvisi: avvisiUnici };
+    }
+
+    // --- AGGIORNAMENTO INTERFACCIA ---
+    function aggiornaUI() {
+      const { avvisi } = elaboraEVerificaDipendenze();
+
+      if (avvisi.length > 0) {
+        listaAvvisi.innerHTML = avvisi.map(a => `<li>${a}</li>`).join('');
+        boxAvvisi.style.display = "block";
+      } else {
+        boxAvvisi.style.display = "none";
+      }
+
+      listaFile.innerHTML = "";
+      if (librerieCaricate.length === 0) {
+        listaFile.innerHTML = `<li style="color: #6c757d; background: none; padding: 0;">Nessun file caricato.</li>`;
+        selectMetodo.disabled = true;
+        btnRender.disabled = true;
+        stato.innerText = "Carica delle librerie per iniziare.";
+        return;
+      }
+
+      librerieCaricate.forEach((lib) => {
+        const li = document.createElement('li');
+        li.innerHTML = `<span>📄 <strong>${lib.name}</strong> (${lib.modules.length} moduli trovati)</span>`;
+        listaFile.appendChild(li);
+      });
+
+      selectMetodo.innerHTML = `<option value="">-- Scegli un metodo/modulo --</option>`;
+      librerieCaricate.forEach((lib, libIdx) => {
+        lib.modules.forEach((mod, modIdx) => {
+          const opt = document.createElement('option');
+          opt.value = `${libIdx}:${modIdx}`;
+          opt.innerText = `${mod.name} (da ${lib.name})`;
+          selectMetodo.appendChild(opt);
+        });
+      });
+      selectMetodo.disabled = false;
+
+      if (moduloAttivo) {
+        btnRender.disabled = false;
+        stato.innerText = "Configura i parametri e premi Genera.";
+      } else {
+        btnRender.disabled = true;
+        stato.innerText = "Scegli un modulo da disegnare.";
+      }
+    }
+
+    // Cambio selezione modulo (Popolamento griglia compatta)
+    selectMetodo.addEventListener('change', (e) => {
+      const val = e.target.value;
+      if (!val) {
+        moduloAttivo = null;
+        sezioneParametri.style.display = "none";
+        btnRender.disabled = true;
+        return;
+      }
+
+      const [libIdx, modIdx] = val.split(':').map(Number);
+      moduloAttivo = {
+        fileName: librerieCaricate[libIdx].name,
+        moduleName: librerieCaricate[libIdx].modules[modIdx].name,
+        params: librerieCaricate[libIdx].modules[modIdx].params
+      };
+
+      containerParametri.innerHTML = "";
+      containerParametri.className = "grid-parametri"; // Classe per CSS Grid
+
+      moduloAttivo.params.forEach(param => {
+        const box = document.createElement('div');
+        box.className = "param-box";
+
+        const label = document.createElement('label');
+
+        // Sostituita la dicitura testuale con l'asterisco rosso * per campi obbligatori
+        if (!param.defaultValue) {
+          label.innerHTML = `${param.name} <span class="asterisk-required" title="Obbligatorio">*</span>`;
+        } else {
+          label.innerText = param.name;
+        }
+
+        const input = document.createElement('input');
+        input.type = "text";
+        input.value = param.defaultValue;
+        input.dataset.paramName = param.name;
+
+        // Visualizzazione placeholder per mantenere l'interfaccia compatta
+        if (!param.defaultValue) {
+          input.placeholder = "Valore richiesto";
+          input.style.borderColor = "#f5c6cb";
+        } else if (param.defaultValue.startsWith('"') || param.defaultValue.startsWith("'")) {
+          input.placeholder = 'es: "rosso"';
+        }
+
+        box.appendChild(label);
+        box.appendChild(input);
+        containerParametri.appendChild(box);
+      });
+
+      sezioneParametri.style.display = "block";
+      btnRender.disabled = false;
+      stato.innerText = "Parametri pronti in griglia. Personalizzali e clicca su Genera.";
+    });
+
+    // Caricamento file da input
+    fileInput.addEventListener('change', (e) => {
+      const files = e.target.files;
+      if (files.length === 0) return;
+
+      Array.from(files).forEach(file => {
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+          const codice = evt.target.result;
+          const moduli = analizzaCodiceScad(file.name, codice);
+
+          librerieCaricate = librerieCaricate.filter(l => l.name !== file.name);
+          librerieCaricate.push({
+            name: file.name,
+            content: codice,
+            modules: moduli
+          });
+          aggiornaUI();
+        };
+        reader.readAsText(file);
+      });
+    });
+
+    // --- CARICAMENTO LIBRERIA DI ESEMPIO CON INGRANAGGIO CONICO OTTIMIZZATO ---
+    btnEsempio.addEventListener('click', () => {
+      const fileBase = {
+        name: "ingranaggio_base.scad",
+        content: `
+pi = PI;
+rad = 180/PI;
+clearance = 0.01;
+
+function grad(pressure_angle) = pressure_angle*rad;
+function radian(pressure_angle) = pressure_angle/rad;
+function polar_to_cartesian(polvect) = [ polvect[0]*cos(polvect[1]), polvect[0]*sin(polvect[1]) ];
+function ev(r,rho) = [ r/cos(rho), grad(tan(rho)-radian(rho)) ];
+function sphere_ev(theta0,theta) = 1/sin(theta0)*acos(cos(theta)/cos(theta0))-acos(tan(theta0)/tan(theta));
+function sphere_to_cartesian(vect) = [ vect[0]*sin(vect[1])*cos(vect[2]), vect[0]*sin(vect[1])*sin(vect[2]), vect[0]*cos(vect[1]) ];
+        `.trim()
+      };
+
+      const fileBevel = {
+        name: "ingranaggio_bevel.scad",
+        content: `
+use <ingranaggio_base.scad>
+
+module bevel_gear(modul=1.5, tooth_number=18, partial_cone_angle=45, tooth_width=10, bore=5, pressure_angle=20, helix_angle=0) {
+    d_outside = modul * tooth_number;
+    r_outside = d_outside / 2;
+    rg_outside = r_outside/sin(partial_cone_angle);
+    rg_inside = rg_outside - tooth_width;
+    r_inside = r_outside*rg_inside/rg_outside;
+    alpha_spur = atan(tan(pressure_angle)/cos(helix_angle));
+    delta_b = asin(cos(alpha_spur)*sin(partial_cone_angle));
+    da_outside = (modul <1)? d_outside + (modul * 2.2) * cos(partial_cone_angle): d_outside + modul * 2 * cos(partial_cone_angle);
+    ra_outside = da_outside / 2;
+    delta_a = asin(ra_outside/rg_outside);
+    c = modul / 6;
+    df_outside = d_outside - (modul +c) * 2 * cos(partial_cone_angle);
+    rf_outside = df_outside / 2;
+    delta_f = asin(rf_outside/rg_outside);
+    rkf = rg_outside*sin(delta_f);
+    height_f = rg_outside*cos(delta_f);
+
+    height_k = (rg_outside-tooth_width)/cos(partial_cone_angle);
+    rk = (rg_outside-tooth_width)/sin(partial_cone_angle);
+    rfk = rk*height_k*tan(delta_f)/(rk+height_k*tan(delta_f));
+    height_fk = rk*height_k/(height_k*tan(delta_f)+rk);
+
+    phi_r = sphere_ev(delta_b, partial_cone_angle);
+
+    gamma_g = 2*atan(tooth_width*tan(helix_angle)/(2*rg_outside-tooth_width));
+    gamma = 2*asin(rg_outside/r_outside*sin(gamma_g/2));
+
+    step = (delta_a - delta_b)/16;
+    tau = 360/tooth_number;
+    start = (delta_b > delta_f) ? delta_b : delta_f;
+    mirrpoint = (180*(1-clearance))/tooth_number+2*phi_r;
+
+    rotate([0,0,phi_r+90*(1-clearance)/tooth_number]){
+        translate([0,0,height_f]) rotate(a=[0,180,0]){
+            union(){
+                translate([0,0,height_f]) rotate(a=[0,180,0]){
+                    difference(){
+                        linear_extrude(height=height_f-height_fk, scale=rfk/rkf) circle(rkf*1.001);
+                        translate([0,0,-1]){
+                            cylinder(h = height_f-height_fk+2, r = bore/2);
+                        }
+                    }
+                }
+                for (rot = [0:tau:360]){
+                    echo(str("PROGRESS:", round(rot/360*100)));
+                    rotate (rot) {
+                        union(){
+                            if (delta_b > delta_f){
+                                flankpoint_under = 1*mirrpoint;
+                                flankpoint_over = sphere_ev(delta_f, start);
+                                polyhedron(
+                                    points = [
+                                        sphere_to_cartesian([rg_outside, start*1.001, flankpoint_under]),
+                                        sphere_to_cartesian([rg_inside, start*1.001, flankpoint_under+gamma]),
+                                        sphere_to_cartesian([rg_inside, start*1.001, mirrpoint-flankpoint_under+gamma]),
+                                        sphere_to_cartesian([rg_outside, start*1.001, mirrpoint-flankpoint_under]),
+                                        sphere_to_cartesian([rg_outside, delta_f, flankpoint_under]),
+                                        sphere_to_cartesian([rg_inside, delta_f, flankpoint_under+gamma]),
+                                        sphere_to_cartesian([rg_inside, delta_f, mirrpoint-flankpoint_under+gamma]),
+                                        sphere_to_cartesian([rg_outside, delta_f, mirrpoint-flankpoint_under])
+                                    ],
+                                    faces = [[0,1,2],[0,2,3],[0,4,1],[1,4,5],[1,5,2],[2,5,6],[2,6,3],[3,6,7],[0,3,7],[0,7,4],[4,6,5],[4,7,6]],
+                                    convexity =1
+                                );
+                            }
+
+                            for (delta = [start:step:delta_a-step]){
+                                flankpoint_under = sphere_ev(delta_b, delta);
+                                flankpoint_over = sphere_ev(delta_b, delta+step);
+                                polyhedron(
+                                    points = [
+                                        sphere_to_cartesian([rg_outside, delta, flankpoint_under]),
+                                        sphere_to_cartesian([rg_inside, delta, flankpoint_under+gamma]),
+                                        sphere_to_cartesian([rg_inside, delta, mirrpoint-flankpoint_under+gamma]),
+                                        sphere_to_cartesian([rg_outside, delta, mirrpoint-flankpoint_under]),
+                                        sphere_to_cartesian([rg_outside, delta+step, flankpoint_over]),
+                                        sphere_to_cartesian([rg_inside, delta+step, flankpoint_over+gamma]),
+                                        sphere_to_cartesian([rg_inside, delta+step, mirrpoint-flankpoint_over+gamma]),
+                                        sphere_to_cartesian([rg_outside, delta+step, mirrpoint-flankpoint_over])
+                                    ],
+                                    faces = [[0,1,2],[0,2,3],[0,4,1],[1,4,5],[1,5,2],[2,5,6],[2,6,3],[3,6,7],[0,3,7],[0,7,4],[4,6,5],[4,7,6]],
+                                    convexity =1
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+        `.trim()
+      };
+
+      librerieCaricate = librerieCaricate.filter(l => l.name !== fileBase.name && l.name !== fileBevel.name);
+
+      librerieCaricate.push({
+        name: fileBase.name,
+        content: fileBase.content,
+        modules: analizzaCodiceScad(fileBase.name, fileBase.content)
+      });
+
+      librerieCaricate.push({
+        name: fileBevel.name,
+        content: fileBevel.content,
+        modules: analizzaCodiceScad(fileBevel.name, fileBevel.content)
+      });
+
+      aggiornaUI();
+    });
+
+    // Pulisci tutto
+    btnPulisci.addEventListener('click', () => {
+      librerieCaricate = [];
+      moduloAttivo = null;
+      if (compilazioneAttiva) {
+        URL.revokeObjectURL(compilazioneAttiva.url);
+        compilazioneAttiva = null;
+      }
+      sezioneParametri.style.display = "none";
+      sezioneVisualizzatore.style.display = "none";
+      sezioneProgresso.style.display = "none";
+      scene.meshes.slice().forEach(m => m.dispose());
+      logContainer.innerHTML = `<span style="color: #6a9955;">// Terminale pronto. In attesa di compilazione...</span>`;
+      aggiornaUI();
+    });
+
+    // --- GENERAZIONE CON ALLOCAZIONE ASINCRONA SBLOCCANTE ---
+    btnRender.addEventListener('click', async () => {
+      if (!moduloAttivo) return;
+
+      logContainer.innerHTML = "";
+      btnRender.disabled = true;
+      btnDownload.disabled = true;
+
+      // Fase 1: Inizializzazione di un motore fresco in RAM
+      impostaFase("Fase 1/5: Inizializzazione motore OpenSCAD (RAM)...", 5, true);
+      logToPage("[Sistema] Allocazione di una sandbox virtuale fresca...");
+
+      // Ritardo di sblocco thread per il browser (consente il repaint dei log e della barra)
+      await new Promise(resolve => setTimeout(resolve, 60));
+
+      try {
+        const instanceRaw = await createOpenSCAD({
+          noInitialRun: true,
+          print: (text) => logToPage(text, false),
+          printErr: (text) => logToPage(text, false)
+        });
+
+        const instance = instanceRaw.getInstance();
+
+        // Fase 2: Risoluzione dipendenze
+        impostaFase("Fase 2/5: Risoluzione dipendenze e scrittura file in RAM...", 15, true);
+        logToPage("[Sistema] Risoluzione alberi delle dipendenze e scrittura nel FS virtuale...");
+
+        await new Promise(resolve => setTimeout(resolve, 40));
+
+        const { librerieRiscritte } = elaboraEVerificaDipendenze();
+
+        librerieRiscritte.forEach(lib => {
+          instance.FS.writeFile("/" + lib.name, lib.contentRewritten);
+        });
+
+        // Raccoglie i parametri
+        const parametriImpostati = [];
+        const inputs = containerParametri.querySelectorAll('input');
+        inputs.forEach(input => {
+          const nomeParam = input.dataset.paramName;
+          const valoreParam = input.value.trim();
+          if (valoreParam !== "") {
+            parametriImpostati.push(`${nomeParam} = ${valoreParam}`);
+          }
+        });
+
+        // Crea il file input principale
+        let codicePrincipale = "";
+        librerieRiscritte.forEach(lib => {
+          codicePrincipale += `use <${lib.name}>\n`;
+        });
+        codicePrincipale += `\n${moduloAttivo.moduleName}(${parametriImpostati.join(', ')});\n`;
+
+        instance.FS.writeFile("/input.scad", codicePrincipale);
+
+        // Fase 3: Esecuzione di callMain
+        impostaFase("Fase 3/5: Calcolo geometrico dei solidi... 0%", 20, false);
+        logToPage("[Sistema] Avvio esecuzione compilatore OpenSCAD...");
+        stato.innerText = "Calcolo matematico dei solidi in corso...";
+
+        await new Promise(resolve => setTimeout(resolve, 50));
+
+        // Esegui la compilazione
+        instance.callMain(["/input.scad", "-o", "/output.stl"]);
+
+        // Fase 4: Lettura STL
+        impostaFase("Fase 4/5: Compilazione terminata! Lettura della mesh dalla RAM...", 88, true);
+        logToPage("[Sistema] Compilazione terminata con successo!");
+
+        await new Promise(resolve => setTimeout(resolve, 40));
+
+        const outputBytes = instance.FS.readFile("/output.stl");
+        logToPage(`[Sistema] Dimensione file STL generato: ${(outputBytes.length / 1024).toFixed(2)} KB`);
+
+        // Fase 5: Caricamento in BabylonJS
+        impostaFase("Fase 5/5: Conversione e caricamento nel motore 3D BabylonJS...", 92, true);
+        logToPage("[Sistema] Avvio caricamento mesh nel motore 3D (attendi)...");
+        stato.innerText = "Caricamento nel visualizzatore 3D...";
+
+        await new Promise(resolve => setTimeout(resolve, 40));
+
+        if (compilazioneAttiva) {
+          URL.revokeObjectURL(compilazioneAttiva.url);
+        }
+
+        const blob = new Blob([outputBytes], { type: "application/sla" });
+        const fileUrl = URL.createObjectURL(blob);
+
+        compilazioneAttiva = {
+          url: fileUrl,
+          filename: `${moduloAttivo.moduleName}_personalizzato.stl`
+        };
+
+        // Resetta i vecchi mesh 3D
+        scene.meshes.slice().forEach(mesh => mesh.dispose());
+
+        // Caricamento asincrono della mesh nel visualizzatore
+        BABYLON.SceneLoader.ImportMesh(
+          "",
+          "",
+          fileUrl,
+          scene,
+          function (newMeshes) {
+            if (newMeshes.length > 0) {
+              let min = null;
+              let max = null;
+
+              newMeshes.forEach(mesh => {
+                const mat = new BABYLON.StandardMaterial("meshMaterial", scene);
+                mat.diffuseColor = new BABYLON.Color3(0.2, 0.55, 0.9);
+                mat.specularColor = new BABYLON.Color3(0.3, 0.3, 0.3);
+                mat.backFaceCulling = false;
+                mesh.material = mat;
+
+                const boundingInfo = mesh.getBoundingInfo();
+                const boundingBox = boundingInfo.boundingBox;
+                if (!min) {
+                  min = boundingBox.minimumWorld.clone();
+                  max = boundingBox.maximumWorld.clone();
+                } else {
+                  min = BABYLON.Vector3.Minimize(min, boundingBox.minimumWorld);
+                  max = BABYLON.Vector3.Maximize(max, boundingBox.maximumWorld);
+                }
+              });
+
+              // Centra e adatta la telecamera
+              const center = BABYLON.Vector3.Center(min, max);
+              camera.setTarget(center);
+
+              const size = BABYLON.Vector3.Distance(min, max);
+              camera.radius = size * 1.5;
+
+              sezioneVisualizzatore.style.display = "block";
+              engine.resize();
+
+              impostaFase("Elaborazione completata con successo!", 100, false);
+              logToPage("[Sistema] Modello 3D generato e renderizzato correttamente!");
+              stato.innerText = "Modello pronto sul visualizzatore.";
+              btnDownload.disabled = false;
+            }
+          },
+          // Callback avanzamento BabylonJS
+          function (evt) {
+            if (evt.lengthComputable) {
+              const percentualeBabylon = Math.round((evt.loaded * 100) / evt.total);
+              const valoreBarra = Math.round(92 + (percentualeBabylon * 0.07));
+              progressBar.style.width = valoreBarra + "%";
+              progressBar.innerText = valoreBarra + "%";
+              faseStato.innerText = `Fase 5/5: Elaborazione mesh per la GPU... ${percentualeBabylon}%`;
+            }
+          },
+          function (scene, message, exception) {
+            console.error(message, exception);
+            logToPage("[Sistema] Errore di caricamento 3D: " + message, true);
+            stato.innerText = "Errore durante il caricamento 3D: " + message;
+          },
+          ".stl"
+        );
+
+      } catch (error) {
+        console.error(error);
+        logToPage("[Sistema] ERRORE CRITICO: " + error.message, true);
+        stato.innerText = "Errore durante la compilazione: " + error.message;
+        impostaFase("Errore durante la generazione", 0, false);
+      } finally {
+        btnRender.disabled = false;
+      }
+    });
+
+    // --- SCARICAMENTO DIRETTO ---
+    btnDownload.addEventListener('click', () => {
+      if (!compilazioneAttiva) return;
+
+      const downloadLink = document.createElement('a');
+      downloadLink.href = compilazioneAttiva.url;
+      downloadLink.download = compilazioneAttiva.filename;
+
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+
+      logToPage(`[Sistema] File "${compilazioneAttiva.filename}" scaricato con successo!`);
+      stato.innerText = `File "${compilazioneAttiva.filename}" salvato sul PC.`;
+    });
+
+    // Inizializza l'interfaccia a schermo all'avvio
+    aggiornaUI();
+
+  </script>
+
+</body>
+</html>
